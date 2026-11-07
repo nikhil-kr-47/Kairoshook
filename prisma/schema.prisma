@@ -1,0 +1,60 @@
+// KairosHook - Distributed Resilient Webhook Gateway
+// Prisma Schema v6
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// 1. The Event Lifecycle State Machine
+// ==========================================
+enum EventStatus {
+  PENDING             // Ingested, sitting in Redis queue
+  PROCESSING          // Currently being processed by a worker
+  COMPLETED           // Successfully processed and committed
+  WAITING_DEPENDENCY  // Out-of-order: waiting for parent event
+  DEAD_LETTER         // Permanently failed after max retries
+}
+
+// ==========================================
+// 2. The WebhookEvent Master Table (Audit Log + State Tracker)
+// ==========================================
+model WebhookEvent {
+  id              String      @id @default(uuid())
+  eventId         String      @unique   // Provider's event ID (e.g. Stripe's evt_123)
+  provider        String                // e.g. "stripe", "shopify", "razorpay"
+  topic           String                // e.g. "payment.succeeded", "order.cancelled"
+  entityId        String?               // Business entity ID for partition hashing (e.g. "order_999")
+  payload         Json                  // Raw JSON payload received from the webhook
+  status          EventStatus @default(PENDING)
+  attempts        Int         @default(0)
+  maxAttempts     Int         @default(3)
+  lastError       String?     @db.Text  // Full stack trace for debugging (unlimited length)
+  receivedAt      DateTime    @default(now())
+  processedAt     DateTime?
+  updatedAt       DateTime    @updatedAt
+
+  @@index([eventId])
+  @@index([entityId])
+  @@index([status])
+}
+
+// ==========================================
+// 3. The Idempotency Record (Long-Term Deduplication Vault)
+// ==========================================
+model IdempotencyRecord {
+  id             String   @id @default(uuid())
+  key            String   @unique       // e.g. "idemp:stripe:evt_123"
+  responseStatus Int                    // Cached HTTP status code (e.g. 200)
+  responseBody   Json                   // Cached response payload to echo back on duplicate
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime               // 7 days from createdAt — safe cleanup window
+
+  @@index([key])
+  @@index([expiresAt])
+}

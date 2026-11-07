@@ -1,0 +1,47 @@
+name: kairoshook-infra
+
+services:
+  # ========================================================
+  # 1. PostgreSQL (Persistent Storage & Dead-Letter Queue)
+  # ========================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: kairoshook-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: kairo_admin
+      POSTGRES_PASSWORD: kairo_secret_password
+      POSTGRES_DB: kairoshook_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kairo_admin -d kairoshook_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ========================================================
+  # 2. Redis (Microsecond Idempotency Locks & Streaming Buffer)
+  # ========================================================
+  redis:
+    image: redis:7-alpine
+    container_name: kairoshook-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

@@ -1,0 +1,33 @@
+{
+  "name": "kairoshook",
+  "version": "1.0.0",
+  "description": "Distributed resilient webhook ingestion gateway with idempotency locks, out-of-order event reconciliation, and dead-letter safety.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon index.js",
+    "postinstall": "prisma skills sync || exit 0",
+    "contract:emit": "prisma contract emit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nikhil-kr-47/Kairoshook.git"
+  },
+  "author": "Nikhil Kumar",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nikhil-kr-47/Kairoshook/issues"
+  },
+  "homepage": "https://github.com/nikhil-kr-47/Kairoshook#readme",
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "prisma": "^6.4.1",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.4.1",
+    "dotenv": "^18.0.9",
+    "express": "^5.3.0"
+  }
+}
